@@ -265,7 +265,7 @@ Here we use two complementary summaries: the Akaike Information Criterion (AIC) 
 
 We now use AIC-based stepwise selection to choose a reduced logistic regression model. Starting from the full model, we apply `step()` with AIC as the criterion, allowing variables to be both dropped and re-added. We then compute fitted probabilities on the training data and use the Hosmer–Lemeshow goodness-of-fit test to assess whether the reduced model appears to fit the data adequately.
 
-```{r p1b-step-hl}
+```{r p1b-step-select}
 # AIC-based stepwise selection starting from the full model
 glm_step <- step(
   glm_full,
@@ -274,10 +274,20 @@ glm_step <- step(
 )
 
 summary(glm_step)
+```
 
-# Predicted probabilities on the training data from the reduced model
+The AIC-based stepwise search keeps `diabetes` in the model even though its Wald p-value is above 0.05. We require all predictors in the final logistic model to be significant at the 5% level, so we now refit a version of the stepwise-selected model that simply drops `diabetes` and keeps the remaining predictors.
+
+```{r p1b-step-hl}
+# Here we'll manually enforce that all predictors must be significant
+# we drop diabetes from the stepwise-selected model and refit
+glm_step_nodiab <- update(glm_step, . ~ . - diabetes)
+
+summary(glm_step_nodiab)
+
+# Predicted probabilities on the training data from the final reduced model
 train_prob_glm_step <- predict(
-  glm_step,
+  glm_step_nodiab,
   newdata = pima_train,
   type    = "response"
 )
@@ -300,11 +310,11 @@ hl_summary <- tibble(
 knitr::kable(
   hl_summary,
   digits  = 4,
-  caption = "Hosmer–Lemeshow goodness-of-fit test for the reduced logistic model"
+  caption = "Hosmer–Lemeshow goodness-of-fit test for the final reduced logistic model (without diabetes)"
 )
 ```
 
-**Conclusion:** The AIC-based stepwise procedure retains six predictors in the reduced model: `pregnant`, `glucose`, `diastolic`, `bmi`, `diabetes`, and `age`. Variables such as `triceps` and `insulin` are dropped because they do not provide enough improvement in AIC once the other predictors are in the model. The Hosmer–Lemeshow test for this reduced model yields a test statistic of about $7.87$ on $8$ degrees of freedom with $p \approx 0.45$. Because this $p$-value is well above common significance levels, we do not see evidence of serious lack of fit on the training data: the observed and expected counts in the probability groups are reasonably consistent. At the same time, the Hosmer–Lemeshow test has limited power in small samples and depends on the arbitrary choice of grouping, so it should be viewed as one piece of evidence rather than a definitive verdict; it is best interpreted alongside residual plots and other diagnostics.
+**Conclusion:** The AIC-based stepwise procedure initially selected a model with six predictors: `pregnant`, `glucose`, `diastolic`, `bmi`, `diabetes`, and `age`. However, `diabetes` had a Wald p-value around 0.14 and therefore was not significant at the 5% level. To satisfy the requirement that all predictors in the final logistic model be significant, we refit the model without `diabetes`, yielding a five-predictor model with `pregnant`, `glucose`, `diastolic`, `bmi`, and `age`. The coefficient estimates change very little and the AIC increases only slightly (from 503.46 to 503.63), so we regard this as a reasonable trade-off between parsimony and fit. The Hosmer–Lemeshow test for this final reduced model produces a non-significant p-value, so we do not see strong evidence of lack of fit on the training data: the observed and expected counts across probability groups are reasonably consistent. As usual, the Hosmer–Lemeshow test should be interpreted alongside residual plots and other diagnostics rather than as a definitive verdict on model adequacy.
 
 ### 1(c) Training confusion matrix and accuracy with cutoff 0.5
 
@@ -413,16 +423,16 @@ knitr::kable(
 )
 ```
 
-**Conclusion:** When we increase the cutoff to $0.9$, the training accuracy drops to about $0.67$, sensitivity for positives falls dramatically to roughly $0.07$, and specificity increases to about $0.99$. This behavior matches our expectations: by requiring very high predicted probability before calling a case positive, the model becomes extremely reluctant to predict a positive test. Almost all negative patients are correctly classified (very high specificity), but the vast majority of true positives are now missed (very low sensitivity). On the training data alone, this more stringent cutoff offers little advantage: it reduces false positives, but at the cost of rejecting almost all truly positive cases, which is typically unacceptable for a screening tool where missing patients with diabetes can have serious consequences.
+**Conclusion:** When we increase the cutoff to $0.9$, the training accuracy drops to about $0.67$, sensitivity for positives falls dramatically to roughly $0.09$, and specificity increases to about $0.99$. This behavior matches our expectations: by requiring very high predicted probability before calling a case positive, the model becomes extremely reluctant to predict a positive test. Almost all negative patients are correctly classified (very high specificity), but the vast majority of true positives are now missed (very low sensitivity). On the training data alone, this more stringent cutoff offers little advantage: it reduces false positives, but at the cost of rejecting almost all truly positive cases, which is typically unacceptable for a screening tool where missing patients with diabetes can have serious consequences.
 
 ### 1(e) Test-set performance and choice of cutoff
 
 Finally, we evaluate the reduced logistic regression model on the held-out test set using both cutoffs $0.5$ and $0.9$. We compute predicted probabilities for each test observation, classify patients at each cutoff, and then construct confusion matrices and performance metrics. We then compare test performance between the two cutoffs and decide which threshold is more appropriate overall.
 
 ```{r p1e-test-preds}
-# Predicted probabilities on the test data from the reduced logistic model
+# Predicted probabilities on the test data from the final reduced logistic model
 test_prob_glm_step <- predict(
-  glm_step,
+  glm_step_nodiab,
   newdata = pima_test,
   type    = "response"
 )
@@ -510,7 +520,7 @@ knitr::kable(
 )
 ```
 
-**Conclusion:** On the test set, the reduced logistic model with cutoff $0.5$ attains accuracy around $0.77$, sensitivity about $0.60$, and specificity about $0.85$. These values are fairly close to the corresponding training metrics, suggesting that the model generalizes reasonably well and is not heavily overfitting. When we raise the cutoff to $0.9$, test accuracy falls to about $0.69$, sensitivity collapses to roughly $0.11$, and specificity reaches $1.00$, meaning that the model never predicts a positive test unless it is extremely certain. In practice, this stricter rule eliminates false positives but misses almost all true positives, which is undesirable in a screening context where undiagnosed diabetes may lead to substantial harm. Balancing these considerations, we would prefer the cutoff of $0.5$ on the test data: it maintains higher overall accuracy and, more importantly, much higher sensitivity, while still keeping specificity reasonably high.
+**Conclusion:** On the test set, the reduced logistic model with cutoff $0.5$ attains accuracy around $0.77$, sensitivity about $0.60$, and specificity about $0.85$. These values are fairly close to the corresponding training metrics, suggesting that the model generalizes reasonably well and is not heavily overfitting. When we raise the cutoff to $0.9$, test accuracy falls to about $0.69$, sensitivity collapses to roughly $0.09$, and specificity reaches $1.00$, meaning that the model never predicts a positive test unless it is extremely certain. In practice, this stricter rule eliminates false positives but misses almost all true positives, which is undesirable in a screening context where undiagnosed diabetes may lead to substantial harm. Balancing these considerations, we would prefer the cutoff of $0.5$ on the test data: it maintains higher overall accuracy and, more importantly, much higher sensitivity, while still keeping specificity reasonably high.
 
 ## Problem 2: Tree-based and ensemble models
 
@@ -1040,37 +1050,9 @@ knitr::kable(
 )
 ```
 
-**Conclusion:** Looking at the test-set summary, the reduced logistic regression with cutoff $0.5$ and the simple `tree` model achieve the highest accuracy (both around $0.77$) with fairly similar sensitivity and specificity profiles. Logistic regression with cutoff $0.9$ performs noticeably worse overall: although it attains perfect specificity, its sensitivity for positive tests is extremely low, so it is not a good choice for screening. Among the tree-based and ensemble methods, C5.0 and AdaBoost come closest to the logistic model in terms of accuracy, with AdaBoost offering the highest test-set sensitivity for positive cases but somewhat lower specificity. Random forest and XGBoost, despite their perfect training performance, do not dominate on the test set: their accuracies are only moderate and their sensitivity/specificity balance is comparable to, or slightly worse than, simpler models, which is consistent with mild overfitting.
+**Conclusion:** Looking at the test-set summary, the reduced logistic regression with cutoff $0.5$ and the simple `tree` model achieve the highest accuracy (both around $0.77$) with fairly similar sensitivity and specificity profiles. Logistic regression with cutoff $0.9$ performs noticeably worse overall: although it attains nearly perfect specificity, its sensitivity for positive tests is extremely low, so it is not a good choice for screening. Among the tree-based and ensemble methods, C5.0 and AdaBoost come closest to the logistic model in terms of accuracy, with AdaBoost offering the highest test-set sensitivity for positive cases but somewhat lower specificity. Random forest and XGBoost, despite their perfect training performance, do not dominate on the test set: their accuracies are only moderate and their sensitivity/specificity balance is comparable to, or slightly worse than, simpler models, which is consistent with mild overfitting.
 
 Taking both predictive performance and interpretability into account, we would select the reduced logistic regression model with cutoff $0.5$ as the champion. It delivers top-tier test accuracy, a reasonable trade-off between sensitivity and specificity for positive diabetes tests, and easily interpretable coefficients that quantify how each predictor affects the log-odds of a positive test. If we wanted slightly higher sensitivity and were willing to sacrifice some specificity and interpretability, the AdaBoost model could be considered as an alternative, but for most purposes the logistic regression model provides the clearest and most stable choice.
-
-**Some notes about adaboost:**
-
-**THE BELOW METRICS WERE COMPUTED WHILE I WAS FIGHTING WITH ADABOOST. THEY ARE INCLUDED FOR TEACHING PURPOSES. DO NOT HARDCODE METRICS LIKE THIS IN GENERAL, I ONLY DID IT BECAUSE I DON'T WANT TO RUN ADABOOST THREE TIMES!**
-
-* A shallow AdaBoost model (`mfinal = 10`, `maxdepth = 2`, `minsplit = 20`) gives the weakest ensemble: lower test accuracy and only moderate sensitivity and specificity.
-* A moderately complex AdaBoost model (`mfinal = 30`, `maxdepth = 3`, `minsplit = 20`) improves test accuracy and sensitivity, with a slight gain in specificity. This setting strikes a good balance between catching positives and avoiding false alarms.
-* The default AdaBoost settings (`mfinal = 100`, `maxdepth = 30`, `minsplit = 20`, via `rpart.control()` defaults) yield the highest test accuracy and the highest specificity, but sensitivity drops back relative to the moderate configuration. The model becomes more conservative about predicting a positive test.
-
-```{r p2-ada-config-summary}
-ada_config_summary <- tibble(
-  config = c("Shallow", "Moderate", "Default"),
-  mfinal = c(10, 30, 100),
-  maxdepth = c(2, 3, 30),
-  minsplit = c(20, 20, 20),
-  accuracy = c(0.7174, 0.7391, 0.7435),
-  sensitivity_positive = c(0.6250, 0.6625, 0.6250),
-  specificity_positive = c(0.7667, 0.7800, 0.8067)
-)
-
-knitr::kable(
-  ada_config_summary,
-  digits  = 4,
-  caption = "Test-set performance for three AdaBoost configurations on the pima data"
-)
-```
-
-The shallow configuration yields the lowest accuracy and is dominated by the moderate and default settings. Between the moderate and default AdaBoost models, the default configuration slightly improves accuracy and specificity but at the cost of lower sensitivity for positive tests. If our priority is to detect as many true positives as possible in a screening setting, the moderate configuration (`mfinal = 30`, `maxdepth = 3`, `minsplit = 20`) is a more appealing trade-off; if we instead emphasize avoiding false positives and maximizing overall accuracy, the default configuration is preferable.
 
 ```{r timing_end, echo=FALSE}
 end_time <- Sys.time()
