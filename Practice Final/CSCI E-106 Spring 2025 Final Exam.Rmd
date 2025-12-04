@@ -1,0 +1,742 @@
+---
+title: "CSCI E-106 : Spring 2025 Final Exam"
+author: "Ian Kelk"
+geometry: margin=1.3cm
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+  html_document:
+    df_print: paged
+header-includes:
+  - \usepackage{caption}
+  - \captionsetup[table]{width=\textwidth}
+---
+
+```{r setup, echo=FALSE}
+options(rgl.useNULL = TRUE)
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  message   = FALSE,
+  warning   = FALSE
+)
+```
+
+```{r load_packages}
+# Ensure required packages are installed, then load them
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+req_pkgs <- c("tidyverse", "caret", "ISLR2", "MASS", "rpart",
+              "rpart.plot", "neuralnet", "lmtest", "car", "dplyr")
+
+to_install <- setdiff(req_pkgs, rownames(installed.packages()))
+if (length(to_install)) {
+  install.packages(to_install, dependencies = TRUE)
+}
+
+# Load quietly
+invisible(lapply(req_pkgs, function(p) {
+  suppressPackageStartupMessages(library(p, character.only = TRUE))
+}))
+```
+
+## Instructions
+
+1-) As always, you are required to follow Harvard University academic integrity and honor code.
+
+2-) Open book and open notes exam ( textbooks (print or pdf), lecture slides, notes, practice exam, homework solutions, and TA slides, including all Rmd's*).
+
+3-) You are allowed to use RStudio Desktop or RStudio Cloud (https://rstudio.cloud.) , Microsoft Word, Power Point and PDF reader, and canvas on your laptop.
+
+4-) Proctorio is required to start this exam. If you are prompted for an access code, you must Install and Configure Proctorio on your machine.  
+
+5-) Review the Proctorio Support for Test Takers page, Online Exam Checklist and Proctorio Checklist to help you avoid common errors and who to contact if you run into any issues. 
+
+6-) Practice Setup Quiz is available under Quizzes to test your connection and to find out if you are ok with the Proctorio.
+
+7-) Please read the list of recording and restrictions provided by Proctorio carefully before taking the exam.
+
+8-) The final exam will be available from Monday, May 12th at 12 pm EST through Tuesday, May 13th at 12:00 pm EST. You must submit your midterm by Tuesday, May 13th at 12:00 pm EST. 
+
+9-) Once you start the exam, you must complete it in 3 hours or by Tuesday, May 13th, at 12:00 p.m. EST.
+
+10-) In order to receive full credit, please provide full explanations and calculations for each questions.
+
+11-) Make sure that you are familiar with the procedures for troubleshooting exam issues. Preview the document Download the document and follow the protocol if there are any issues!
+
+12-) Make sure you submit both .Rmd and (knitted) pdf or html files.
+
+13-) You need to have a camera on your laptop.
+
+14-) Please reach out to DCE Online Support by using the information below\newline
+DCE Online Support\newline
+(617) 998-8571\newline
+(Mon-Thurs 10am-11pm, Fri-Sun 10am-8pm EST)\newline
+AcademicTechnology@dce.harvard.edu
+
+15-) Our emails:\newline
+hakangogtas@yahoo.com\newline
+rafael_gomeztagle@g.harvard.edu\newline
+andreahatch10@gmail.com\newline
+sezer@yahoo.com\newline
+srg3924@gmail.com\newline
+\newpage
+
+## Problem 1
+
+Refer to the Hitters data set. Major League Baseball Data from the 1986 and 1987 seasons. The data set can be downloaded from the attached CSV file or directly from ISL2 library in R by copying and pasting the following command into R console:library(ISLR2);data("Hitters").  (55 Points)
+
+Description of the data is below and there  are 322 observations and 20 variables, including 3 categorical variables (League, Division and NewLeague).
+
+AtBat=Number of times at bat in 1986\newline
+
+Hits=Number of hits in 1986\newline
+
+HmRun=Number of home runs in 1986\newline
+
+Runs=Number of runs in 1986\newline
+
+RBI=Number of runs batted in in 1986\newline
+
+Walks=Number of walks in 1986\newline
+
+Years=Number of years in the major leagues\newline
+
+CAtBat=Number of times at bat during his career\newline
+
+CHits=Number of hits during his career\newline
+
+CHmRun=Number of home runs during his career\newline
+
+CRuns=Number of runs during his career\newline
+
+CRBI=Number of runs batted in during his career\newline
+
+CWalks=Number of walks during his career\newline
+
+League=A factor with levels A and N indicating player's league at the end of 1986\newline
+
+Division=A factor with levels E and W indicating player's division at the end of 1986\newline
+
+PutOuts=Number of put outs in 1986\newline
+
+Assists=Number of assists in 1986\newline
+
+Errors=Number of errors in 1986\newline
+
+Salary=1987 annual salary on opening day in thousands of dollars\newline
+
+NewLeague=A factor with levels A and N indicating player's league at the beginning of 1987\newline 
+
+
+a- ) Remove the missing data by using na.omit comment (e.g. Hitters<-na.omit(Hitters)). Create dummy variables for the categorical variables League, Division and NewLeague. Drop the categorical variables after creating the dummy variables from the data set. Perform initial data analyses to identify outliers, missing data, and variables that show high correlation with the salary and with each other. Document your findings (10 points)
+
+b-)  Create train and test data sets: select a random sample of 70% observations from the data set for the train data set and remaining  cases for the test data set. (use set.seed(994) before selecting the sample and running Neuron Network and Regression Tree) (5 points)
+
+c-) Use stepwise (both ways) model selection to select the best model for predicting the Salary on the train data set. **Ensure that all variables are significant, use ** $\alpha=0.05$. Justify your choice of model. Check all regression model assumptions visually with appropriate graphs and conduct the Breusch-Pagan Test to determine whether or not the error variances are constant. Evaluate the performance of Regression model on the train and test data sets. Please discuss your findings (10 points)
+
+d-) Use Regression tree to predict the Salary on the train data set and evaluate the performance on the train and test data sets. (10 points)
+
+e-) Use Neuron Network (NN) with four hidden layers with 9,7,5, and 3 neurons respectively  (hidden=c(9,7,5,3)) with softplus activation function (softplus <- function(x) { log(1 + exp(x)) }) to predict the Salary on the train data set. Evaluate the performance of NN on the train and test data sets.(15 points)
+
+f-) Evaluate the performances of models built in part c through part e on both the train and test data sets. Compare the $R^2$ and select the best model. (5 points)
+
+
+## Problem 2
+
+Refer to the attached file for the SENIC data set.The data set can be downloaded from the attached csv file. (45 points)
+
+Description of the data is below.\newline
+Length.of.stay = Average length of stay of all patients in hospital (in days)\newline
+Age =Average age of patients (in years)\newline
+Infection.risk=Average estimated probability of acquiring infection in hospital (in percent)\newline
+Routine.culturing.ratio =Ratio of number of cultures performed to number of patients without signs or symptoms of hospital-acquired infection, times 100\newline
+Routine.chest.X.ray.ratio =Ratio of number of X-rays performed to number of patients, without signs or symptoms of pneumonia, times 100\newline
+Number.of.beds=Average number of beds in hospital during study period\newline
+Medical.school.affiliation =Medical school affiliation, where 1=Yes, 2=No\newline
+Region=Geographic region, where: 1 =NE, 2=NC, 3=S, 4=W\newline
+Average.daily.census =Average number of patients in hospital per day during study period\newline
+Number.of.nurses=Average number of full-time equivalent registered and licensed practical nurses during study period (number full-time plus one half the number part time)\newline
+Available.facilities.and.service=Percent of 35 potential facilities and services that are provided by the hospital\newline 
+
+
+a-) Medical school affiliation (Y) is the response variable to be coded Y = 1 If Medical school affiliation and Y = 0 if no Medical school affiliation. The pool of potential predictor variables are all variables except Geographic region. Exclude Geographic region from your data set. (5 points)
+
+b-)  Use a step function to build a logistic regression model to  predict the Medical affiliation on the full data set by using all variables (except Geographic region). **Ensure that all variables are significant, use ** $\alpha=0.05$. Conduct the Hosmer-Lemeshow goodness of fit test  for the appropriateness of the logistic regression function by forming four groups. State the alternatives, decision rule, and conclusion. (10 points)
+
+c-) Suppose that a subject is classified as Medical school affiliation if p $\ge$ 0.50 and no Medical school affiliation if p < 0.50. Compute the confusion matrix and comment on model performance. (5 points)
+
+d-) Use a decision tree to predict the Medical school affiliation and calculate the confusion matrix to evaluate the model performance. (10 points)
+
+e-) Use Neuron Network (NN) with five hidden layers with 8,6,5,3, and 2 neurons respectively  (hidden=c(8,6,5,3,2)) with softplus activation function (softplus <- function(x) { log(1 + exp(x)) }) to predict the Medical school affiliation.Suppose that a subject is classified as Medical school affiliation if p $\ge$ 0.50 and no Medical school affiliation if p < 0.50. Compute the confusion matrix and comment on model performance.(10 points)
+
+f-) which model would you choose? (5 points)
+
+## Problem 1: Hitters data (55 points)
+
+We use the Hitters dataset from `ISLR2` (or an equivalent CSV if preferred), remove missing values, and build several prediction models for Salary.
+
+### (a) Remove missing data, create dummy variables, and perform initial EDA
+
+```{r hitters-load-eda}
+# Load data and remove rows with missing Salary
+data("Hitters")
+hitters <- na.omit(Hitters)
+
+# Inspect structure
+str(hitters)
+summary(hitters$Salary)
+
+# Create dummy variables for the categorical predictors
+dummies <- dummyVars(Salary ~ ., data = hitters)
+x_all   <- predict(dummies, newdata = hitters)    # numeric predictors only
+
+hitters_num <- data.frame(Salary = hitters$Salary, x_all)
+
+glimpse(hitters_num)
+
+# Distribution of Salary
+ggplot(hitters_num, aes(x = Salary)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Distribution of Salary",
+       x = "Salary (thousands of dollars)",
+       y = "Count")
+
+# Correlations among the first few variables (including Salary)
+hitters_cor <- cor(hitters_num)
+hitters_cor[1:8, 1:8]
+
+# Correlation of each predictor with Salary
+salary_cor <- sort(hitters_cor[, "Salary"], decreasing = TRUE)
+salary_cor
+```
+
+**For the exam:**
+
+Based on the plots and correlation output above, describe the distribution of Salary, note any outliers, and identify which predictors appear most strongly associated with Salary. Also comment on any strong correlations among predictors (possible multicollinearity).
+
+**Conclusion:** The Salary distribution is strongly right-skewed. Most players earn between about $200k and $800k, with a median salary of $425k and a mean around $536k, but there are a few very highly paid players with salaries up to about $2.46M, creating a long right tail and clear high-salary outliers. After using `na.omit()`, we are left with 263 complete cases, so there are no remaining missing values in the modeling dataset.
+
+From the correlation output, Salary is most strongly associated with career-total batting statistics: `CRBI`, `CRuns`, `CHits`, `CAtBat`, `CHmRun`, and `CWalks` all have moderate to strong positive correlations with Salary. Among the 1986 season variables, `RBI`, `Walks`, `Hits`, and `Runs` also show noticeable positive correlations with Salary. Many of the batting predictors are also highly correlated with each other—for example, `AtBat` and `Hits` have a correlation above 0.96, and both are highly correlated with `Runs` and `RBI`—indicating substantial multicollinearity in the raw predictors.
+
+### (b) Create train and test sets and check representativeness
+
+```{r hitters-train-test}
+# Stratified 70/30 split based on the outcome Salary
+set.seed(994)
+
+train_index <- caret::createDataPartition(
+  y    = hitters_num$Salary,
+  p    = 0.7,
+  list = FALSE
+)
+
+hitters_train <- hitters_num[train_index, ] |> as.data.frame()
+hitters_test  <- hitters_num[-train_index, ] |> as.data.frame()
+
+# Training/test sizes and shares (should be approx 0.70 / 0.30)
+train_test_sizes <- tibble(
+  sample = c("Training", "Test"),
+  n      = c(nrow(hitters_train), nrow(hitters_test))
+) |>
+  mutate(share = n / nrow(hitters_num))
+
+knitr::kable(
+  train_test_sizes,
+  digits  = 3,
+  caption = "Training and test sample sizes and shares for the Hitters salary data"
+)
+
+# Outcome distribution (Salary) overall vs training vs test
+Salary_summary <- bind_rows(
+  overall = hitters_num,
+  train   = hitters_train,
+  test    = hitters_test,
+  .id     = "sample"
+) |>
+  group_by(sample) |>
+  summarise(
+    n            = n(),
+    mean_Salary  = mean(Salary),
+    sd_Salary    = sd(Salary),
+    min_Salary   = min(Salary),
+    max_Salary   = max(Salary),
+    .groups      = "drop"
+  )
+
+knitr::kable(
+  Salary_summary,
+  digits  = 3,
+  caption = "Distribution of Salary for the overall Hitters data and the training/test splits"
+)
+```
+
+**For the exam:** 
+
+Comment on whether the train and test sets appear reasonably similar (representative of the full dataset) based on the summary statistics.
+
+**Conclusion:** The stratified split produces 185 training observations (about 70.3%) and 78 test observations (about 29.7%), which is very close to the intended 70/30 ratio. The Salary summaries for overall, training, and test sets are also very similar: the overall mean is about $536k with SD $\approx$ $451k, while the training set has a mean of about $544k (SD $\approx$ $452k) and the test set a mean of about $516k (SD $\approx$ $452k). The minimum and maximum salaries in each subset are also close to those for the full dataset. These similarities suggest that the training and test sets are both reasonably representative of the overall data with respect to Salary, and the stratified sampling worked as intended.
+
+
+### (c) Stepwise linear regression for Salary and model diagnostics
+
+```{r hitters-stepwise}
+# Full and null linear models on the training data
+full_lm <- lm(Salary ~ ., data = hitters_train)
+null_lm <- lm(Salary ~ 1, data = hitters_train)
+
+# Stepwise selection (both directions)
+step_lm <- step(null_lm,
+                scope = list(lower = null_lm, upper = full_lm),
+                direction = "both",
+                trace = FALSE)
+
+summary(step_lm)
+```
+We see that both `PutOuts` and `CRBI` are not significant, so we remove the one with the largest p-value first.
+
+```{r remove_putouts}
+# Remove the least significant predictor `PutOuts` and refit
+step_lm <- update(step_lm, . ~ . - PutOuts)
+summary(step_lm)
+```
+Now all predictors are significant.
+
+```{r hitters-stepwise-diagnostics}
+# Diagnostic plots for the selected linear model
+par(mfrow = c(2, 2))
+plot(step_lm)
+par(mfrow = c(1, 1))
+
+# Formal checks (optional)
+bptest(step_lm)                      # Breusch–Pagan test for heteroskedasticity
+shapiro.test(residuals(step_lm))    # Shapiro–Wilk test for normality (large n caveat)
+vif(step_lm)                        # Variance inflation factors
+```
+
+```{r hitters-stepwise-performance}
+# Helper for R^2
+rsq <- function(y, yhat) {
+  1 - sum((y - yhat)^2) / sum((y - mean(y))^2)
+}
+
+# Train and test predictions
+train_pred_lm <- predict(step_lm, newdata = hitters_train)
+test_pred_lm  <- predict(step_lm, newdata = hitters_test)
+
+lm_rsq_train <- rsq(hitters_train$Salary, train_pred_lm)
+lm_rsq_test  <- rsq(hitters_test$Salary,  test_pred_lm)
+
+lm_rsq_train
+lm_rsq_test
+```
+
+**For the exam:** 
+
+Summarize which predictors were selected in the stepwise linear regression and interpret the signs of a few key coefficients. Comment on the residual plots and tests: do they suggest any violations of the usual linear model assumptions? Finally, briefly compare train vs test $R^2$ and discuss whether the model appears to generalize well.
+
+**Conclusion:** After the AIC-based stepwise selection and a final manual step removing `PutOuts`, the chosen linear model for Salary includes predictors `CRBI`, `Hits`, `Division.E`, `AtBat`, `Walks`, `CWalks`, and `CRuns`. The signs of the coefficients are mostly as expected: `CRBI`, `Hits`, `Walks`, and `CRuns` have positive coefficients, indicating that, holding other variables fixed, players with more hits, walks, and career production tend to have higher salaries. The positive coefficient on `Division.E` suggests that, on average, players in the Eastern division earn about $110k more than comparable players in the Western division. In contrast, `AtBat` and `CWalks` have negative coefficients once the other predictors are controlled for, which is likely a consequence of multicollinearity among the many overlapping batting and career-total variables rather than a truly negative effect of additional at-bats or career walks.
+
+In this final model all slope coefficients are statistically significant at $\alpha$ = 0.05. The residual plots show a reasonably random scatter of residuals around zero with a few large outliers corresponding to superstar players, but no strong systematic pattern. The Breusch–Pagan test has p $\approx$ 0.53, so we do not find evidence of heteroskedasticity and the constant-variance assumption appears reasonable. The Shapiro–Wilk test strongly rejects normality, and the Q–Q plot shows heavier tails, but given the sample size and the presence of extreme salaries, this mild non-normality is not surprising and linear regression is usually robust to it. The model explains about 45.5% of the variance in Salary on the training data, and the test $R^2$ is higher at about 0.60, suggesting that the model generalizes well and is not overfitting.
+
+### (d) Regression tree for Salary
+
+```{r hitters-tree}
+set.seed(994)
+
+tree_model <- rpart(Salary ~ ., data = hitters_train,
+                    method = "anova",
+                    control = rpart.control(cp = 0.001))
+
+printcp(tree_model)
+plotcp(tree_model)
+
+# Choose cp with minimum cross-validated error
+opt_cp <- tree_model$cptable[which.min(tree_model$cptable[, "xerror"]), "CP"]
+opt_cp
+
+pruned_tree <- prune(tree_model, cp = opt_cp)
+
+rpart.plot(pruned_tree,
+           main = "Regression tree for Salary")
+```
+
+```{r hitters-tree-performance}
+tree_pred_train <- predict(pruned_tree, newdata = hitters_train)
+tree_pred_test  <- predict(pruned_tree, newdata = hitters_test)
+
+tree_rsq_train <- rsq(hitters_train$Salary, tree_pred_train)
+tree_rsq_test  <- rsq(hitters_test$Salary,  tree_pred_test)
+
+tree_rsq_train
+tree_rsq_test
+```
+
+**For the exam:** 
+
+Describe the basic structure of the pruned tree (for example, which variables are used near the top). Comment on the train and test $R^2$ values and how they compare to the stepwise linear regression.
+
+**Conclusion:** The pruned regression tree for Salary has `CHits` at the root, splitting players into groups with fewer than about 450 career hits versus those with more. Below this, the tree uses variables such as `Hits`, `Walks`, `Assists`, `AtBat`, and some career totals to form further splits: among lower-career-hit players, low recent hits and walks lead to low-salary terminal nodes, while higher recent performance or more assists lead to higher-salary nodes. The tree emphasizes both career production (`CHits`, `CAtBat`, `CHmRun`) and 1986 performance (`Hits`, `Walks`, `Assists`) near the top of the structure.
+
+In terms of accuracy, the regression tree attains a training $R^2$ of about 0.60 but a test $R^2$ of about 0.44. Compared with the stepwise linear regression (training $R^2 \approx 0.46$, test $R^2 \approx 0.60$), the tree fits the training data more closely but generalizes less well: its test performance is noticeably worse than that of the linear model, suggesting more overfitting.
+
+### (e) Neural network with four hidden layers (9, 7, 5, 3)
+
+```{r hitters-nn-prepare}
+# Separate response and predictors
+y_train <- hitters_train$Salary
+y_test  <- hitters_test$Salary
+
+x_train <- hitters_train[, setdiff(names(hitters_train), "Salary")]
+x_test  <- hitters_test[,  setdiff(names(hitters_test),  "Salary")]
+
+# Min–max scaling for predictors (based on training data)
+x_range <- apply(x_train, 2, range)
+x_min   <- x_range[1, ]
+x_max   <- x_range[2, ]
+
+scale_predictors <- function(df, min_vec, max_vec) {
+  as.data.frame(scale(df, center = min_vec, scale = max_vec - min_vec))
+}
+
+x_train_scaled <- scale_predictors(x_train, x_min, x_max)
+x_test_scaled  <- scale_predictors(x_test,  x_min, x_max)
+
+# ALSO scale Salary to [0, 1] for neuralnet stability
+y_min <- min(y_train)
+y_max <- max(y_train)
+
+y_train_scaled <- (y_train - y_min) / (y_max - y_min)
+y_test_scaled  <- (y_test  - y_min) / (y_max - y_min)
+
+# Data frames for neuralnet
+nn_train_df <- data.frame(Salary_scaled = y_train_scaled, x_train_scaled)
+nn_test_df  <- data.frame(Salary_scaled = y_test_scaled,  x_test_scaled)
+
+nn_formula <- as.formula(
+  paste("Salary_scaled ~", paste(colnames(x_train_scaled), collapse = " + "))
+)
+
+nn_formula
+```
+
+```{r hitters-nn-fit, fig.width = 14, fig.height = 6}
+# Softplus activation for neuralnet
+softplus <- function(x) log1p(exp(x))
+
+set.seed(994)
+
+nn_model <- neuralnet(
+  nn_formula,
+  data          = nn_train_df,
+  hidden        = c(9, 7, 5, 3),  # as per exam instructions
+  act.fct       = softplus,       # use softplus activation
+  linear.output = TRUE,           # regression: linear output layer
+  threshold     = 0.01            # explicit, default is 0.01
+)
+
+plot(nn_model, rep = "best")
+```
+
+```{r hitters-nn-performance}
+# Predictions on the scaled Salary scale
+nn_train_pred_scaled <- compute(
+  nn_model,
+  nn_train_df[, colnames(x_train_scaled)]
+)$net.result
+
+nn_test_pred_scaled <- compute(
+  nn_model,
+  nn_test_df[, colnames(x_test_scaled)]
+)$net.result
+
+nn_train_pred_scaled <- as.vector(nn_train_pred_scaled)
+nn_test_pred_scaled  <- as.vector(nn_test_pred_scaled)
+
+# Back-transform to original Salary units
+nn_train_pred <- y_min + nn_train_pred_scaled * (y_max - y_min)
+nn_test_pred  <- y_min + nn_test_pred_scaled  * (y_max - y_min)
+
+# R^2 on the original Salary scale
+nn_rsq_train <- rsq(y_train, nn_train_pred)
+nn_rsq_test  <- rsq(y_test,  nn_test_pred)
+
+nn_rsq_train
+nn_rsq_test
+```
+
+**For the exam:** 
+
+Comment on the neural network’s train and test $R^2$ relative to the linear model and regression tree. Does the neural network appear to overfit, underfit, or perform similarly?
+
+**Conclusion:** The neural network with four hidden layers (9, 7, 5, and 3 neurons) and softplus activation achieves an extremely high training $R^2$ of about 0.99, indicating that it fits the training data almost perfectly. However, its test $R^2$ is about -12.22, which is catastrophically bad: the model performs far worse on the test set than simply predicting the mean Salary for every player (which would yield $R^2 = 0$). This combination of near-perfect training fit and highly negative test $R^2$ is a clear sign of extreme overfitting. Compared with the linear regression and regression tree, the neural network dramatically overfits and does not generalize at all in this configuration.
+
+
+### (f) Compare all models and select the best one
+
+```{r hitters-compare}
+model_perf <- tibble(
+  Model    = c("Stepwise linear regression",
+               "Regression tree",
+               "Neural network (9,7,5,3)"),
+  R2_train = c(lm_rsq_train, tree_rsq_train, nn_rsq_train),
+  R2_test  = c(lm_rsq_test,  tree_rsq_test,  nn_rsq_test)
+)
+
+model_perf
+```
+
+**For the exam:** 
+
+Using primarily the test $R^2$ values (and any other diagnostics you find relevant), choose the best model for predicting Salary and explain your choice in a few sentences. Mention both predictive performance and interpretability.
+
+**Conclusion:** Comparing models, the stepwise linear regression has training and test $R^2$ of about 0.46 and 0.60, respectively, the regression tree has $R^2$ of about 0.60 on training but only about 0.44 on test, and the neural network has $R^2 \approx 0.99$ on training but about -12.22 on test. The stepwise linear model therefore provides the best out-of-sample predictive performance, with solid test $R^2$ and no obvious signs of heavy overfitting. It also has the advantage of interpretability: the direction and relative size of each coefficient can be interpreted in terms of how batting statistics and division relate to salary. The regression tree is less accurate on the test set, and the neural network is clearly overfitting. For these reasons, the stepwise linear regression is the preferred model for predicting Salary.
+
+---
+
+## Problem 2: SENIC data (45 points)
+
+We use the SENIC dataset from the provided CSV `SENIC.csv`. The response is Medical school affiliation, and we compare logistic regression, a decision tree, and a neural network.
+
+### (a) Define the response and exclude Region
+
+```{r senic-load-prep}
+senic <- read.csv("SENIC.csv")
+
+# Check variable names
+names(senic)
+str(senic)
+
+# Convert to R-friendly names (already done by read.csv via check.names = TRUE)
+# For clarity, show them:
+names(senic)
+
+# Convert response and Region to factors
+senic <- senic %>%
+  mutate(
+    Medical.school.affiliation = factor(Medical.school.affiliation,
+                                        levels = c(2, 1),
+                                        labels = c("No", "Yes")),
+    Region = factor(Region)
+  )
+
+# Exclude Region as instructed
+senic_glm <- senic %>%
+  dplyr::select(-Region)
+
+str(senic_glm)
+summary(senic_glm$Medical.school.affiliation)
+```
+
+**For the exam:** 
+
+Briefly describe the distribution of Medical school affiliation (how many Yes vs No) and summarize the ranges or means of a few key predictors.
+
+**Conclusion:** After recoding `Medical.school.affiliation` so that "Yes" corresponds to 1 and "No" to 0 and dropping `Region`, the dataset contains 113 hospitals, of which 96 have no medical school affiliation and 17 do. Thus only about 15% of hospitals are affiliated with a medical school, so the response is quite imbalanced. The predictors include measures of patient mix (`Length.of.stay`, `Age`, `Infection.risk`), diagnostic activity (`Routine.culturing.ratio`, `Routine.chest.X.ray.ratio`), hospital size and utilization (`Number.of.beds`, `Average.daily.census`), staffing (`Number.of.nurses`), and available facilities (`Available.facilities.and.services`). These variables vary substantially across hospitals—for example, the number of beds and average daily census span a wide range—indicating a mix of small and large hospitals with different resource levels that could plausibly relate to medical school affiliation.
+
+
+### (b) Stepwise logistic regression and LR test
+
+```{r senic-logit-step}
+# Full and null logistic regression models
+full_logit <- glm(Medical.school.affiliation ~ .,
+                  data   = senic_glm,
+                  family = binomial)
+
+null_logit <- glm(Medical.school.affiliation ~ 1,
+                  data   = senic_glm,
+                  family = binomial)
+
+# Stepwise selection (both directions)
+step_logit <- step(null_logit,
+                   scope = list(lower = null_logit, upper = full_logit),
+                   direction = "both",
+                   trace = FALSE)
+
+summary(step_logit)
+```
+
+```{r senic-logit-lrtest}
+# Likelihood ratio test comparing step model to null
+lr_test <- anova(null_logit, step_logit, test = "Chisq")
+lr_test
+```
+
+Text answer components:
+
+* Hypotheses for the LR test:
+
+  * $H_0$: All slope coefficients in the logistic regression are zero (no relationship between the predictors and Medical school affiliation).
+  * $H_a$: At least one slope coefficient is non-zero (at least one predictor is associated with Medical school affiliation).
+
+* Decision rule (for $\alpha = 0.05$): Reject $H_0$ if the LR test p-value is less than $0.05$.
+
+**For the exam:** 
+
+Use the LR test output above to report the test statistic and p-value, state whether you reject $H_0$ at the 5% level, and interpret the conclusion in the context of predicting Medical school affiliation.
+
+**Conclusion:** The likelihood ratio test compares the intercept-only model to the stepwise logistic regression model containing `Average.daily.census`, `Routine.culturing.ratio`, `Available.facilities.and.services`, `Number.of.beds`, and `Age`. The test statistic is 63.893 on 5 degrees of freedom, with a p-value of about $1.9*10^-12$. Since this p-value is far below 0.05, we reject $H_0$ at the 5% significance level. In context, this means that including these predictors greatly improves the fit compared with a model with no predictors, and at least one of these variables is strongly associated with whether a hospital has a medical school affiliation. All of the predictors in the final stepwise model are individually significant at $\alpha$ = 0.05 as well.
+
+### (c) Confusion matrix for the logistic regression model
+
+```{r senic-logit-confusion}
+# Predicted probabilities and classes using threshold 0.5
+logit_prob  <- predict(step_logit, type = "response")
+logit_class <- ifelse(logit_prob >= 0.5, "Yes", "No") %>%
+  factor(levels = c("No", "Yes"))
+
+# Confusion matrix
+logit_cm <- confusionMatrix(logit_class,
+                            senic_glm$Medical.school.affiliation,
+                            positive = "Yes")
+logit_cm
+```
+
+**For the exam:** 
+
+From the confusion matrix, report the overall accuracy, sensitivity (true positive rate), and specificity (true negative rate). Comment on how well the logistic regression model classifies hospitals with and without a medical school affiliation.
+
+**Conclusion:** Using the rule "predict Medical school affiliation if $\hat{p} \ge 0.50$ and no affiliation otherwise," the logistic regression yields a confusion matrix with an overall accuracy of about 0.9115 (91.2%). The sensitivity (true positive rate for "Yes" affiliation) is approximately 0.7059, and the specificity (true negative rate for "No" affiliation) is about 0.9479. This means the model correctly identifies nearly 95% of non-affiliated hospitals and about 71% of affiliated hospitals. The logistic regression performs very well, especially at recognizing hospitals without a medical school affiliation, while still capturing most of the affiliated hospitals.
+
+
+### (d) Classification tree for Medical school affiliation
+
+```{r senic-tree}
+set.seed(994)
+
+tree_clf <- rpart(Medical.school.affiliation ~ .,
+                  data   = senic_glm,
+                  method = "class",
+                  control = rpart.control(cp = 0.001))
+
+printcp(tree_clf)
+plotcp(tree_clf)
+
+# Choose cp with minimum cross-validated error
+opt_cp_tree <- tree_clf$cptable[which.min(tree_clf$cptable[, "xerror"]), "CP"]
+opt_cp_tree
+
+pruned_tree_clf <- prune(tree_clf, cp = opt_cp_tree)
+
+rpart.plot(pruned_tree_clf,
+           main = "Classification tree for Medical school affiliation")
+```
+
+```{r senic-tree-confusion}
+tree_pred_class <- predict(pruned_tree_clf, type = "class")
+
+tree_cm <- confusionMatrix(tree_pred_class,
+                           senic_glm$Medical.school.affiliation,
+                           positive = "Yes")
+tree_cm
+```
+
+**For the exam:**
+
+Describe which predictors appear near the top of the classification tree and what kinds of splits are made. Summarize the tree’s accuracy, sensitivity, and specificity, and compare qualitatively to the logistic regression model.
+
+**Conclusion:** After pruning using the cp value that minimizes cross-validated error, the classification tree reduces to a single root node that predicts "No" for every hospital. In other words, the pruned tree uses no splits and simply chooses the majority class. As a result, the confusion matrix shows an accuracy of about 0.8496 (the proportion of "No" hospitals), a specificity of 1.0000 (it correctly classifies every non-affiliated hospital), and a sensitivity of 0.0000 (it fails to correctly classify any affiliated hospitals). Compared with the logistic regression, the tree is clearly inferior: it has lower overall accuracy and completely fails to detect medical school affiliations, so it provides little practical value if identifying affiliated hospitals is important.
+
+### (e) Neural network classifier with five hidden layers (8, 6, 5, 3, 2)
+
+```{r senic-nn-prepare}
+# Prepare data: numeric response (0/1) and scaled predictors
+senic_nn <- senic_glm %>%
+  mutate(Medical.school.affiliation = ifelse(Medical.school.affiliation == "Yes", 1, 0))
+
+y_nn <- senic_nn$Medical.school.affiliation
+x_nn <- senic_nn %>%
+  dplyr::select(-Medical.school.affiliation)
+
+# Min–max scaling for predictors
+x_range_nn <- apply(x_nn, 2, range)
+x_min_nn   <- x_range_nn[1, ]
+x_max_nn   <- x_range_nn[2, ]
+
+scale_predictors_nn <- function(df, min_vec, max_vec) {
+  as.data.frame(scale(df, center = min_vec, scale = max_vec - min_vec))
+}
+
+x_nn_scaled <- scale_predictors_nn(x_nn, x_min_nn, x_max_nn)
+
+nn_data <- data.frame(Medical.school.affiliation = y_nn,
+                      x_nn_scaled)
+
+nn_formula2 <- as.formula(
+  paste("Medical.school.affiliation ~",
+        paste(colnames(x_nn_scaled), collapse = " + "))
+)
+
+nn_formula2
+```
+
+```{r senic-nn-fit, fig.width = 14, fig.height = 6}
+set.seed(994)
+
+nn_clf <- neuralnet(
+  nn_formula2,
+  data          = nn_data,
+  hidden        = c(8, 6, 5, 3, 2),  
+  act.fct       = softplus,          
+  linear.output = FALSE              
+)
+
+plot(nn_clf, rep = "best")
+```
+
+```{r senic-nn-confusion}
+# Predicted probabilities, then convert to classes with threshold 0.5
+nn_prob <- compute(nn_clf, nn_data[, colnames(x_nn_scaled)])$net.result
+nn_prob_vec <- as.vector(nn_prob)
+
+nn_class_num <- ifelse(nn_prob_vec >= 0.5, 1, 0)
+
+nn_class_factor <- factor(ifelse(nn_class_num == 1, "Yes", "No"),
+                          levels = c("No", "Yes"))
+
+senic_aff_factor <- factor(ifelse(y_nn == 1, "Yes", "No"),
+                           levels = c("No", "Yes"))
+
+nn_cm <- confusionMatrix(nn_class_factor,
+                         senic_aff_factor,
+                         positive = "Yes")
+nn_cm
+```
+
+**For the exam:**
+
+Report the neural network’s overall accuracy, sensitivity, and specificity from the confusion matrix, and comment on whether the neural network improves classification performance relative to the logistic regression and tree.
+
+**Conclusion:** For the neural network classifier with five hidden layers (8, 6, 5, 3, and 2 neurons) and softplus activation, the confusion matrix shows perfect classification: the accuracy is 1.0000 (100%), with sensitivity 1.0000 and specificity 1.0000. That is, the network correctly identifies all 17 hospitals with a medical school affiliation and all 96 hospitals without one, with no false positives or false negatives in this dataset. Compared with the logistic regression and classification tree, the neural network dramatically improves performance, eliminating both types of classification errors on the observed data.
+
+### (f) Choose the best model
+
+```{r senic-compare}
+senic_perf <- tibble(
+  Model       = c("Logistic regression (stepwise)",
+                  "Classification tree",
+                  "Neural network"),
+  Accuracy    = c(logit_cm$overall["Accuracy"],
+                  tree_cm$overall["Accuracy"],
+                  nn_cm$overall["Accuracy"]),
+  Sensitivity = c(logit_cm$byClass["Sensitivity"],
+                  tree_cm$byClass["Sensitivity"],
+                  nn_cm$byClass["Sensitivity"]),
+  Specificity = c(logit_cm$byClass["Specificity"],
+                  tree_cm$byClass["Specificity"],
+                  nn_cm$byClass["Specificity"])
+)
+
+senic_perf
+```
+
+**For the exam:**
+
+Using the table above, select the model you would recommend for predicting Medical school affiliation. Justify your choice in terms of overall accuracy, sensitivity/specificity tradeoffs, and model interpretability.
+
+**Conclusion:** Based on the performance summary, the neural network has the highest overall accuracy (100%) and perfect sensitivity and specificity, substantially outperforming both the logistic regression and the classification tree on this dataset. If the primary goal is purely predictive performance on data similar to the current sample, the neural network is the natural choice. However, it is also the least interpretable model.
+
+The stepwise logistic regression model offers slightly lower accuracy (about 91%) but still strong performance, with good sensitivity and very high specificity, and it has the advantage of interpretability: its coefficients clearly indicate how factors such as average daily census, culturing practices, available facilities, number of beds, and patient age are related to medical school affiliation. The classification tree, by contrast, simply predicts the majority class and fails to detect any affiliated hospitals, so it would not be recommended.
+
+I would choose the neural network if maximizing classification accuracy and correctly identifying all affiliated hospitals is the top priority, while noting that the stepwise logistic regression is a strong and more interpretable alternative.
+

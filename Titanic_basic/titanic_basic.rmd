@@ -1,0 +1,458 @@
+---
+title: "CSCI E-106 Titanic Survival Tutorial Solution"
+author: "Ian Kelk"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+geometry: margin=1.3cm
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+  html_document:
+    df_print: paged
+header-includes:
+  - \usepackage{caption}
+  - \captionsetup[table]{width=\textwidth}
+---
+
+# Classify whether a passenger on board the RMS Titanic survived
+
+Classify whether a passenger on board the maiden voyage of the RMS Titanic in 1912 survived given their age, sex and class. We will use the provided `Titanic_Survival_Data.csv` dataset and build:
+
+- A champion logistic regression model for survival.
+- At least one challenger model (here: a classification tree).
+- Train/test evaluation, plus discussion of limitations and monitoring.
+
+This R Markdown is written as a basic tutorial solution.
+
+## 0. Setup and libraries
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+set.seed(1023)  # Required seed for train/test split
+```
+
+```{r libraries}
+library(tidyverse)   # data wrangling & plotting
+library(caret)       # train/test split, confusion matrices
+library(rpart)       # classification trees
+library(rpart.plot)  # nice tree plots
+library(pROC)        # ROC curves and AUC
+```
+
+## Dataset description
+
+The dataset’s variables are:
+
+| Variable   | Description                                                                 |
+|:----------:|:----------------------------------------------------------------------------|
+| pclass     | Passenger Class: 1st, 2nd or 3rd                                            |
+| survived   | Survival Status: 0 = No, 1 = Yes                                            |
+| name       | Name of the passenger                                                       |
+| Sex        | Sex                                                                         |
+| sibsp      | Number of siblings or spouses aboard                                       |
+| parch      | Number of parents or children aboard                                       |
+| ticket     | Ticket number                                                               |
+| fare       | Passenger fare                                                              |
+| cabin      | Cabin number (e.g., `C85` = deck C, cabin 85)                              |
+| embarked   | Port of embarkation: C = Cherbourg, S = Southampton, Q = Queenstown        |
+| boat       | Lifeboat ID (if passenger survived)                                        |
+| body       | Body number (if passenger did not survive and body was recovered)          |
+| home.dest  | Intended home destination of the passenger                                 |
+
+We will treat `survived` as the binary response and use predictors such as `pclass`, `sex`, `age`, and others.
+
+```{r load-data}
+# Adjust the file name/path if needed
+titanic_raw <- read_csv("Titanic_Survival_Data.csv")
+
+# Standardize column names to lower case for convenience
+titanic <- titanic_raw %>%
+  rename_with(tolower)
+
+glimpse(titanic)
+```
+
+The raw dataset contains 1,310 observations and 14 variables. It includes demographic information (age, sex, passenger class), family structure (siblings/spouses, parents/children), and travel details (fare, cabin, ticket, home destination, port of embarkation). A quick look at the data shows that most core fields are present for nearly all passengers, but some variables such as `age`, `cabin`, `boat`, `body`, and `home.dest` have noticeable missing values, which we will need to account for when building models.
+
+---
+
+# Executive Summary
+
+The goal of this project is to predict the probability that a passenger on the RMS Titanic survived, using information that would plausibly be available at the time of sailing (such as passenger class, age, sex, family members aboard, fare, and port of embarkation). This kind of model could be used in a broader risk-management context to understand which groups were at greatest risk and how different passenger characteristics related to survival.
+
+Our main "champion" model is a logistic regression that uses passenger class, sex, age, number of siblings/spouses, and port of embarkation as predictors. On a held-out test set, this model correctly classifies about 81% of passengers, with sensitivity (recall for survivors) of about 66% and specificity (correctly identifying non-survivors) of about 91%. The area under the ROC curve is roughly 0.85, indicating that the model is generally good at ranking survivors above non-survivors. The key drivers of higher survival probability are being female, traveling in 1st or 2nd class rather than 3rd, being younger, having fewer siblings/spouses aboard, and departing from certain ports.
+
+As a challenger, we also fit a classification tree using the same set of predictors. The tree achieves similar overall accuracy (about 82–83%) and a slightly higher specificity, but lower sensitivity and a slightly lower AUC (about 0.83). Because the logistic model offers more stable performance and more interpretable coefficients, we select logistic regression as our champion model and treat the tree as a benchmark. Both models are limited by the nature of the Titanic data: it is historical, not representative of modern populations, and reflects strong social and economic biases (for example, survival advantages for women and higher-class passengers), so these models should not be naively generalized beyond this context.
+
+---
+
+# I. Introduction (5 points)
+
+In this section, we introduce:
+
+- The business problem.
+- The modeling approach.
+- A high-level overview of the data and methods.
+
+The goal is to predict the probability of survival for Titanic passengers given their observed characteristics. We focus on logistic regression as the champion model, with at least one challenger model for comparison.
+
+Logistic regression is a natural choice here because the outcome of interest, `survived`, is binary (0 = no, 1 = yes). The model directly estimates the probability of survival as a function of the predictors, and the coefficients have a clear interpretation in terms of changes in log-odds or odds ratios. At the same time, it is valuable to have a more flexible, non-parametric challenger model such as a decision tree. The tree can capture nonlinear interactions and simple rule-based structures in the data, giving us a different perspective on the same problem and a benchmark to compare against our logistic "champion" in terms of both accuracy and interpretability.
+
+---
+
+# II. Description of the data and quality (15 points)
+
+Here we explore the data, check for missing values, and think about how to encode variables.
+
+## 2.1 Basic summaries and missingness
+
+```{r basic-summaries}
+summary(titanic)
+
+colSums(is.na(titanic))
+```
+
+The summary and missing-value counts show that some variables are much more complete than others. Core variables such as `pclass`, `survived`, `sex`, `sibsp`, `parch`, and `fare` have almost no missing data (only a handful of missing values each), so they are good candidates for modeling. In contrast, `age` is missing for a sizable subset of passengers, and variables like `cabin`, `boat`, `body`, and `home.dest` are missing for the majority of passengers. This level of missingness would either require substantial imputation or lead to a large loss of data if used directly. In addition, variables like `name`, `ticket`, and the raw `body` number behave more like identifiers than meaningful predictors; they are unlikely to help the model generalize and may even encourage overfitting. For these reasons, we focus our modeling on the cleaner, more interpretable variables and treat the heavily missing or ID-like fields as auxiliary information rather than predictors.
+
+## 2.2 Simple visual exploration
+
+We are particularly interested in how survival varies by sex and passenger class.
+
+```{r survival-barplots}
+# Make a working copy and ensure key variables are typed correctly
+titanic <- titanic %>%
+  mutate(
+    pclass = factor(pclass),
+    sex = factor(sex),
+    embarked = factor(embarked),
+    survived = as.integer(survived),
+    survived = ifelse(survived == 1, 1, 0),
+    survived_factor = factor(survived, levels = c(0, 1),
+                             labels = c("No", "Yes"))
+  ) %>%
+  tidyr::drop_na(sex, pclass, survived)
+
+# Survival proportion by sex
+titanic %>%
+  ggplot(aes(x = sex, fill = survived_factor)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Proportion survived by sex",
+    x = "Sex",
+    y = "Proportion",
+    fill = "Survived"
+  )
+
+# Survival proportion by class and sex
+titanic %>%
+  ggplot(aes(x = pclass, fill = survived_factor)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Proportion survived by passenger class",
+    x = "Passenger class",
+    y = "Proportion",
+    fill = "Survived"
+  ) +
+  facet_wrap(~ sex)
+```
+
+The bar plots confirm well-known Titanic patterns. A much larger proportion of females survived compared to males: among women, the "Yes" portion of the bar dominates, whereas for men the "No" portion is much larger. When we break survival down by passenger class and sex, we see that 1st-class passengers have the highest survival rates, especially 1st-class women, while 3rd-class passengers, particularly 3rd-class men, have the lowest survival rates. These patterns suggest that both sex and passenger class are strong predictors of survival and motivate including them prominently in our models.
+
+## 2.3 Build a modeling dataset
+
+We drop variables that are essentially identifiers or have very high missingness, and we remove rows with missing values in key predictors.
+
+```{r build-modeling-data}
+titanic_model <- titanic %>%
+  select(
+    survived, survived_factor,
+    pclass, sex, age, sibsp, parch, fare, embarked
+  ) %>%
+  filter(
+    !is.na(age),
+    !is.na(fare),
+    !is.na(embarked)
+  )
+
+glimpse(titanic_model)
+```
+
+In building the modeling dataset we kept variables that are both interpretable and reasonably complete: `pclass`, `sex`, `age`, `sibsp`, `parch`, `fare`, and `embarked`, along with the outcome `survived`. We dropped `name`, `ticket`, and `home.dest` because they function primarily as identifiers or detailed text fields that are unlikely to generalize well in a simple tabular model. We also dropped `cabin`, `boat`, and `body` because they are missing for most passengers and may not be available at prediction time (for example, `boat` and `body` are only known after the outcome is realized). Using these variables would either greatly reduce our sample size or introduce unrealistic "cheating" by using post-outcome information, so excluding them leads to a cleaner, more realistic modeling dataset.
+
+---
+
+# III. Model Development Process (15 points)
+
+We now split the data into training and test sets and build candidate models.
+
+## 3.1 Train/test split (70/30, set.seed(1023))
+
+```{r train-test-split}
+set.seed(1023)
+
+train_index <- createDataPartition(
+  titanic_model$survived_factor,
+  p = 0.7,
+  list = FALSE
+)
+
+train_data <- titanic_model[train_index, ]
+test_data  <- titanic_model[-train_index, ]
+
+prop.table(table(train_data$survived_factor))
+prop.table(table(test_data$survived_factor))
+```
+
+The train/test split preserves the overall class balance in the data. In the training set, a bit under 60% of passengers did not survive and a bit over 40% did survive; the test set has almost the same proportions. This similarity is desirable because it means the model is trained and evaluated on datasets with comparable levels of class imbalance, making performance metrics on the test set more representative.
+
+## 3.2 Baseline logistic regression (age, sex, class)
+
+We start with the minimal set of predictors mentioned in the project description: `age`, `sex`, and `pclass`.
+
+```{r logit-simple}
+logit_simple <- glm(
+  survived ~ pclass + sex + age,
+  data = train_data,
+  family = binomial
+)
+
+summary(logit_simple)
+```
+
+In the baseline logistic regression using `pclass`, `sex`, and `age`, the key coefficients are statistically significant at conventional levels. The negative coefficient for `sexmale` indicates that, holding class and age constant, males have much lower log-odds of survival than females; in terms of odds ratios, the odds of survival for a male are only a small fraction of those for an otherwise similar female. The coefficients for `pclass2` and `pclass3` are also negative, so passengers in 2nd and especially 3rd class have substantially lower odds of survival than those in 1st class. The age coefficient is negative as well, implying that each additional year of age slightly reduces the log-odds of survival. More generally, a positive logistic regression coefficient means that an increase in that predictor (or switching to that category) increases the log-odds of survival (odds ratio > 1), while a negative coefficient decreases the log-odds (odds ratio < 1).
+
+## 3.3 Expanded logistic regression and variable selection
+
+Next, we allow more predictors and use stepwise selection (AIC-based) to choose a more flexible model.
+
+```{r logit-step}
+logit_full <- glm(
+  survived ~ pclass + sex + age + sibsp + parch + fare + embarked,
+  data = train_data,
+  family = binomial
+)
+
+summary(logit_full)
+
+logit_step <- step(logit_full, direction = "both", trace = FALSE)
+
+summary(logit_step)
+```
+
+```{r choose-champion}
+champion_model <- logit_step
+champion_model
+```
+
+After starting from the full model and applying stepwise AIC-based selection, the final logistic model (`logit_step`) typically retains `pclass`, `sex`, `age`, `sibsp`, and `embarked` as predictors. This means that passenger class, sex, and age continue to play the same strong roles we saw in the simple model, while the number of siblings/spouses aboard (`sibsp`) and the port of embarkation add additional predictive power. The negative coefficient for `sibsp` suggests that having more close family members aboard is associated with lower survival probability, perhaps because larger groups were harder to move to lifeboats together. The coefficients for `embarked` levels indicate that passengers embarking at some ports had lower odds of survival than those from the reference port. Variables such as `fare` and `parch` are dropped by the stepwise procedure, suggesting that once we account for class, sex, age, and port, they do not improve AIC enough to justify their inclusion. We treat this stepwise logistic model as our champion model for the remainder of the analysis.
+
+---
+
+# IV. Model Performance Testing (15 points)
+
+We evaluate the champion logistic model on both train and test sets.
+
+## 4.1 Classification performance (train vs test)
+
+```{r performance-logit}
+# Training set predictions
+train_probs <- predict(champion_model, newdata = train_data, type = "response")
+train_pred  <- ifelse(train_probs >= 0.5, 1, 0)
+train_pred_factor <- factor(train_pred, levels = c(0, 1), labels = c("No", "Yes"))
+
+confusionMatrix(
+  data      = train_pred_factor,
+  reference = train_data$survived_factor,
+  positive  = "Yes"
+)
+
+# Test set predictions
+test_probs <- predict(champion_model, newdata = test_data, type = "response")
+test_pred  <- ifelse(test_probs >= 0.5, 1, 0)
+test_pred_factor <- factor(test_pred, levels = c(0, 1), labels = c("No", "Yes"))
+
+confusionMatrix(
+  data      = test_pred_factor,
+  reference = test_data$survived_factor,
+  positive  = "Yes"
+)
+```
+
+On the training set, the champion logistic model achieves an accuracy around the high 70% range, with sensitivity (recall for survivors) around 70% and specificity (correctly classifying non-survivors) in the low-to-mid 80% range. On the held-out test set, accuracy is slightly higher (around 81%), sensitivity is in the mid-60% range, and specificity increases to about 90% or more. In other words, the model correctly identifies the majority of survivors and an even higher proportion of non-survivors, and performance on test data is very similar to, and in some respects better than, performance on the training data. This pattern suggests that the model is not severely overfitting: it generalizes well to new passengers drawn from the same population as the training set.
+
+## 4.2 ROC curve and AUC
+
+```{r roc-auc-logit}
+roc_champion <- roc(
+  response = test_data$survived_factor,
+  predictor = test_probs,
+  levels = c("No", "Yes"),
+  direction = "<"
+)
+
+plot(roc_champion,
+     main = "Champion logistic model ROC curve (test set)")
+
+auc(roc_champion)
+```
+
+The ROC curve for the champion logistic model on the test set has an area under the curve (AUC) in the mid-0.80s. An AUC near 0.5 would indicate that the model is no better than random guessing, while an AUC near 1.0 would indicate almost perfect discrimination. An AUC of about 0.85 is typically considered quite good for a real-world classification problem: it means that, if we randomly pick one survivor and one non-survivor, there is about an 85% chance that the model assigns a higher predicted survival probability to the survivor than to the non-survivor.
+
+---
+
+# V. Challenger Models (15 points)
+
+We now build at least one challenger model and compare it to the champion.
+
+## 5.1 Classification tree challenger
+
+We fit a decision tree using the same predictors.
+
+```{r tree-model}
+tree_model <- rpart(
+  survived_factor ~ pclass + sex + age + sibsp + parch + fare + embarked,
+  data   = train_data,
+  method = "class",
+  control = rpart.control(cp = 0.01)
+)
+
+rpart.plot(tree_model, main = "Classification tree for Titanic survival")
+```
+
+## 5.2 Tree performance (train vs test)
+
+```{r performance-tree}
+# Training set
+train_pred_tree <- predict(tree_model, newdata = train_data, type = "class")
+confusionMatrix(
+  data      = train_pred_tree,
+  reference = train_data$survived_factor,
+  positive  = "Yes"
+)
+
+# Test set
+test_pred_tree <- predict(tree_model, newdata = test_data, type = "class")
+confusionMatrix(
+  data      = test_pred_tree,
+  reference = test_data$survived_factor,
+  positive  = "Yes"
+)
+```
+
+We can also compute an approximate ROC curve for the tree, using the predicted probability of survival:
+
+```{r roc-auc-tree}
+test_probs_tree <- predict(tree_model, newdata = test_data, type = "prob")[, "Yes"]
+
+roc_tree <- roc(
+  response = test_data$survived_factor,
+  predictor = test_probs_tree,
+  levels   = c("No", "Yes"),
+  direction = "<"
+)
+
+plot(roc_tree, main = "Tree challenger ROC curve (test set)")
+auc(roc_tree)
+```
+
+The classification tree challenger achieves very similar overall performance to the logistic model. On the test set, the tree’s accuracy is slightly higher (around 82–83%), and its specificity is also higher, meaning it is especially good at correctly identifying non-survivors. However, its sensitivity is somewhat lower than the logistic model’s, so it misses slightly more true survivors. The tree’s AUC on the test set, typically around 0.83, is close to but a bit lower than the logistic model’s AUC of about 0.85, indicating that the logistic model is slightly better at ranking survivors above non-survivors overall.
+
+Given this trade-off, we maintain the stepwise logistic regression as our champion model because it combines competitive predictive performance with more interpretable coefficients and a slightly higher AUC. The tree serves as a challenger and a useful benchmark, especially for exploring decision rules and interactions. In an operational setting, "back-testing" would mean periodically applying the model to new, out-of-sample data that arrive over time and checking whether its performance metrics (accuracy, AUC, calibration, etc.) remain stable. Our train/test evaluation is a simple, one-shot version of this idea: we fit on historical data and then test on data that were not used in training, mimicking how the model would behave on future passengers.
+
+---
+
+# VI. Model Limitation and Assumptions (15 points)
+
+In this section, we discuss:
+
+- **Logistic regression assumptions**:
+  - Correct functional form (e.g., linear in the log-odds for numeric predictors).
+  - No extreme multicollinearity among predictors.
+  - Independence of observations.
+- **Tree model assumptions**:
+  - Trees are non-parametric and flexible but can be unstable and overfit.
+- **Data limitations**:
+  - Titanic data is not a random sample of a modern population.
+  - Some variables (e.g., `cabin`) are heavily missing.
+  - Model may not generalize beyond similar maritime disasters.
+
+Both models rest on important assumptions and are constrained by the underlying data. For the logistic regression, we assume that the log-odds of survival are approximately a linear function of the numeric predictors (such as age and number of siblings/spouses) and that there are no extreme multicollinearity issues among the predictors. In this tutorial we did not formally compute variance inflation factors (VIFs), but the chosen predictors are conceptually distinct (class, sex, age, family counts, port), so serious collinearity problems are unlikely. A more thorough project would explicitly check VIFs and consider transformations or interactions (for example, allowing the effect of age to vary by class) if linearity in the log-odds looked questionable.
+
+Decision trees are non-parametric and make fewer distributional assumptions: they do not require linear relationships or homoscedastic residuals. However, they are prone to overfitting and can be unstable—small changes in the data can lead to different splits—so they typically need pruning or ensemble methods (like random forests) to improve robustness. In our case, we used a complexity parameter (`cp`) to keep the tree reasonably small and to reduce overfitting.
+
+The data themselves also impose limitations. The Titanic dataset is historical and highly specific to a single maritime disaster in 1912. It is not a random sample of a modern population and reflects strong social and economic biases: for example, women and 1st-class passengers had much better access to lifeboats. This means that even a very accurate model on this data is not necessarily fair or generalizable to other contexts. In addition, some variables are heavily missing (e.g., `cabin`, `boat`, `body`, `home.dest`), and we chose to exclude them rather than perform complex imputations in this tutorial. Finally, the outcome of interest is survival in a particular extreme situation; extrapolating these insights to other forms of risk would require great caution.
+
+---
+
+# VII. Ongoing Model Monitoring Plan (5 points)
+
+Suppose this model were deployed in a real-world setting (e.g., a safety or risk management context). How would you monitor it?
+
+You might consider:
+
+- Tracking prediction performance over time (e.g., accuracy, AUC, calibration).
+- Setting thresholds for acceptable performance (e.g., AUC must stay above 0.7).
+- Monitoring input data drift (e.g., distribution of key predictors changes over time).
+- Scheduling regular retraining or refitting if performance degrades.
+
+If this model were deployed in practice, we would track key performance metrics such as accuracy, sensitivity, specificity, AUC, and calibration on new data as they arrive (for example, monthly or quarterly, depending on how frequently new cases are scored). We would also monitor the distributions of important input variables (such as class, age, and sex) over time to detect "data drift" if the population of cases changes.
+
+In terms of governance, we could define thresholds that trigger an investigation or retraining. For example, we might require that test-set AUC remain above 0.70 and that sensitivity and specificity stay within, say, 5–10 percentage points of their original values. If performance falls below these thresholds or if we observe substantial shifts in input distributions, we would retrain or refit the model on more recent data, compare old and new models, and, if appropriate, update the production model. Periodic qualitative reviews of model outputs, especially for high-stakes decisions, would complement these quantitative checks.
+
+---
+
+# VIII. Conclusion (5 points)
+
+This section summarizes:
+
+- Which model you selected as the champion (logistic vs tree).
+- The key drivers of survival according to the model.
+- How well the model predicts on the test set.
+- Any major caveats or limitations.
+
+In summary, we built and compared two predictive models for Titanic survival: a stepwise logistic regression and a classification tree. Both models achieve reasonably strong performance on a held-out test set, with overall accuracy around 81–83% and AUC in the low-to-mid 0.80s. The logistic regression model highlights several key drivers of survival: being female, traveling in a higher passenger class, being younger, having fewer siblings/spouses on board, and embarking from certain ports are all associated with higher predicted survival probabilities.
+
+Although the tree performs similarly and offers an intuitive, rule-based view of the data, we selected the stepwise logistic regression as our champion model. It provides slightly better AUC, comparable accuracy, and more transparent coefficients that are easier to communicate to stakeholders. At the same time, the analysis is constrained by data limitations and historical biases in the Titanic dataset, so any conclusions must be interpreted within that context, and the model should not be applied uncritically outside similar scenarios.
+
+---
+
+# Bibliography (7 points)
+
+- James, G., Witten, D., Hastie, T., & Tibshirani, R. *An Introduction to Statistical Learning with Applications in R* (Springer).  
+- Faraway, J. J. *Extending the Linear Model with R: Generalized Linear, Mixed Effects and Nonparametric Regression Models*.  
+- Course lecture notes for CSCI E-106 on logistic regression and classification trees.  
+- Kaggle. "Titanic: Machine Learning from Disaster" dataset description.  
+- R package documentation: `caret` (model training and evaluation), `rpart` (recursive partitioning and regression trees), and `pROC` (ROC curves and AUC).
+
+---
+
+# Appendix (3 points)
+
+This is a good place for additional plots or diagnostic checks that support your modeling decisions.
+
+For example, you might:
+
+- Show partial residual plots or effect plots for key logistic regression predictors.
+- Show alternative trees with different complexity parameters.
+- Include additional EDA that did not fit into the main text.
+
+```{r extra-eda, eval=FALSE}
+# Example: Age distribution by survival status
+titanic_model %>%
+  ggplot(aes(x = age, fill = survived_factor)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 30) +
+  labs(
+    title = "Age distribution by survival status",
+    x = "Age",
+    y = "Count",
+    fill = "Survived"
+  )
+```
+
+At this stage, the appendix includes an illustrative plot of the age distribution by survival status. Additional diagnostics, such as alternative trees with different complexity parameters, partial dependence or effect plots for the logistic model, or calibration plots comparing predicted and observed survival probabilities, could be added here if a more in-depth analysis is desired.
