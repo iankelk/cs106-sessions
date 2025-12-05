@@ -56,7 +56,7 @@ Refer to the Prostate cancer data set. Serum prostate-specific antigen (PSA) was
 
 a-) Use 70% of the data for train data set and use remaining data (30% of data) for test data set (Please use set.seed(567)). (10 points)
 
-## use the train data set for the questions below
+**use the train data set for the questions below**
 
 b-) Develop a best subset model for predicting PSA. Justify your choice of model. Assess the model performance and check the model assumptions.(10 pts)
 
@@ -66,7 +66,7 @@ d-) Use the lasso regression to predict the PSA level.(15 pts)
 
 e-) Based on the performances of the model on the train data set, which model would you choose? (10 pts)
 
-## use the test data set for the questions below
+**use the test data set for the questions below**
 
 f-) Assess the best subset model performance on the test data set. Is the model performance stable (10 pts).
 
@@ -513,7 +513,7 @@ lambda_1se  <- cv_lasso$lambda.1se
 lambda_min
 lambda_1se
 ```
-Recall that in lasso regression, $\lambda$ is thstrength of the penalty** on the size of the coefficients.
+Recall that in lasso regression, $\lambda$ is the strength of the penalty on the size of the coefficients.
 
 When $\lambda$ is large, the penalty is strong: many coefficients are shrunk toward zero and some are forced exactly to zero (very simple, high-bias model). When $\lambda$ is small, the penalty is weak: coefficients look more like ordinary least squares (more complex, low-bias model). Cross-validation is just helping us pick a good value of $\lambda$ that balances fit vs. shrinkage.
 
@@ -525,7 +525,7 @@ When $\lambda$ is large, the penalty is strong: many coefficients are shrunk tow
 
 This gives us two useful choices:
 
-- `lambda.min`: the value of $\lambda$ with the **smallest average cross-validated error**. This corresponds to the model with the best estimated predictive performance among the grid of $\lambda$ values.
+- `lambda.min`: the value of $\lambda$ with the smallest average cross-validated error. This corresponds to the model with the best estimated predictive performance among the grid of $\lambda$ values.
 
 - `lambda.1se`: the largest value of $\lambda$ whose cross-validated error is within one standard error of the minimum. This typically gives a simpler, more heavily regularized model that performs almost as well as `lambda.min` but with more shrinkage and often fewer non-zero coefficients.
 
