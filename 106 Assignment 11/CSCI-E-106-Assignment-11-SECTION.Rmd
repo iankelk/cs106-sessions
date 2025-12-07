@@ -174,7 +174,7 @@ Briefly describe the train/test split for the U.S. states data, including the nu
 
 ---
 
-### 1(b) Best Subset Regression for Life Expectancy (20 pts)
+### 1(b) Best Subset Regression for Life Expectancy (10 pts)
 
 Develop a best subset model for predicting life expectancy (`LifeExp`). Justify your choice of model. Assess the model performance and check the model assumptions.
 
