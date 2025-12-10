@@ -390,20 +390,25 @@ The data themselves also impose limitations. The Titanic dataset is historical a
 
 ---
 
-# VII. Ongoing Model Monitoring Plan (5 points)
+# VII. Ongoing Model Monitoring Plan (5 points) 
 
 Suppose this model were deployed in a real-world setting (e.g., a safety or risk management context). How would you monitor it?
 
+For some examples, you might think of something like:
+
+* A shipping company in 1911 using this model before each voyage to assess passenger risk, or
+* The Titanic model as a stand-in for a modern classification model (such as credit default, hospital readmission, or customer churn) that is used continuously in production.
+
 You might consider:
 
-- Tracking prediction performance over time (e.g., accuracy, AUC, calibration).
-- Setting thresholds for acceptable performance (e.g., AUC must stay above 0.7).
-- Monitoring input data drift (e.g., distribution of key predictors changes over time).
-- Scheduling regular retraining or refitting if performance degrades.
+* Tracking prediction performance over time (e.g., accuracy, AUC, calibration).
+* Setting thresholds for acceptable performance (e.g., AUC must stay above 0.7).
+* Monitoring input data drift (e.g., distribution of key predictors changes over time).
+* Scheduling regular retraining or refitting if performance degrades.
 
-If this model were deployed in practice, we would track key performance metrics such as accuracy, sensitivity, specificity, AUC, and calibration on new data as they arrive (for example, monthly or quarterly, depending on how frequently new cases are scored). We would also monitor the distributions of important input variables (such as class, age, and sex) over time to detect "data drift" if the population of cases changes.
+If this model were deployed in practice, we would track key performance metrics such as accuracy, sensitivity, specificity, AUC, and calibration on new data as they arrive (for example, monthly or quarterly, depending on how frequently new cases are scored). In a 1911 shipping context, “new cases” would be upcoming voyages with different passenger mixes and routes; in a modern credit or hospital setting, they would be new applicants or new admissions. In either case, we would also monitor the distributions of important input variables (such as class, age, and sex, or their modern analogues) over time to detect data drift if the population of cases changes.
 
-In terms of governance, we could define thresholds that trigger an investigation or retraining. For example, we might require that test-set AUC remain above 0.70 and that sensitivity and specificity stay within, say, 5–10 percentage points of their original values. If performance falls below these thresholds or if we observe substantial shifts in input distributions, we would retrain or refit the model on more recent data, compare old and new models, and, if appropriate, update the production model. Periodic qualitative reviews of model outputs, especially for high-stakes decisions, would complement these quantitative checks.
+In terms of governance, we could define thresholds that trigger an investigation or retraining. For example, we might require that test-set AUC remain above 0.70 and that sensitivity and specificity stay within, say, 5–10 percentage points of their original values. If performance falls below these thresholds or if we observe substantial shifts in input distributions, we would retrain or refit the model on more recent data, compare old and new models, and, if appropriate, update the production model. Periodic qualitative reviews of model outputs, especially for high-stakes decisions (e.g., safety-critical shipping decisions, loan approvals, or hospital discharge planning), would complement these quantitative checks.
 
 ---
 
