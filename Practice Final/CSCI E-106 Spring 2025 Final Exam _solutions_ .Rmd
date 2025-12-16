@@ -1,0 +1,470 @@
+---
+title: "CSCI E-106 : Spring 2025 Final Exam"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(pander)
+library(rmarkdown)
+library(markdown)
+library(MASS)
+library(faraway)
+library(glmnet)
+library(lmtest)
+library(olsrr)
+library(datasets)
+library(leaps)
+library(caret)
+library('fastDummies')
+library(neuralnet)
+library(C50)
+library(ResourceSelection)
+library(rpart)
+library(rpart.plot)
+options("scipen" = 10)
+```
+
+### Instructions
+
+1-) As always, you are required to follow Harvard University academic integrity and honor code.
+
+2-) Open book and open notes exam ( textbooks (print or pdf), lecture slides, notes, practice exam, homework solutions, and TA slides, including all Rmd's*).
+
+3-) You are allowed to use RStudio Desktop or RStudio Cloud (https://rstudio.cloud.) , Microsoft Word, Power Point and PDF reader, and canvas on your laptop.
+
+4-) Proctorio is required to start this exam. If you are prompted for an access code, you must Install and Configure Proctorio on your machine.  
+
+5-) Review the Proctorio Support for Test Takers page, Online Exam Checklist and Proctorio Checklist to help you avoid common errors and who to contact if you run into any issues. 
+
+6-) Practice Setup Quiz is available under Quizzes to test your connection and to find out if you are ok with the Proctorio.
+
+7-) Please read the list of recording and restrictions provided by Proctorio carefully before taking the exam.
+
+8-) The final exam will be available from Monday, May 12th at 12 pm EST through Tuesday, May 13th at 12:00 pm EST. You must submit your midterm by Tuesday, May 13th at 12:00 pm EST. 
+
+9-) Once you start the exam, you must complete it in 3 hours or by Tuesday, May 13th, at 12:00 p.m. EST.
+
+10-) In order to receive full credit, please provide full explanations and calculations for each questions.
+
+11-) Make sure that you are familiar with the procedures for troubleshooting exam issues. Preview the document Download the document and follow the protocol if there are any issues!
+
+12-) Make sure you submit both .Rmd and (knitted) pdf or html files.
+
+13-) You need to have a camera on your laptop.
+
+14-) Please reach out to DCE Online Support by using the information below\newline
+DCE Online Support\newline
+(617) 998-8571\newline
+(Mon-Thurs 10am-11pm, Fri-Sun 10am-8pm EST)\newline
+AcademicTechnology@dce.harvard.edu
+
+15-) Our emails:\newline
+hakangogtas@yahoo.com\newline
+rafael_gomeztagle@g.harvard.edu\newline
+andreahatch10@gmail.com\newline
+sezer@yahoo.com\newline
+srg3924@gmail.com\newline
+\newpage
+
+## Problem 1
+
+Refer to the Hitters data set. Major League Baseball Data from the 1986 and 1987 seasons. The data set can be downloaded from the attached excel file or directly from ISL2 library in R by copying and pasting the following command into R console:library(ISLR2);data("Hitters").  (55 Points)
+
+Description of the data is below and there  are 322 observations and 20 variables, including 3 categorical variables (League, Division and NewLeague).
+
+X1=AtBat=Number of times at bat in 1986\newline
+
+X2=Hits=Number of hits in 1986\newline
+
+X3=HmRun=Number of home runs in 1986\newline
+
+X4=Runs=Number of runs in 1986\newline
+
+RBI=Number of runs batted in in 1986\newline
+
+Walks=Number of walks in 1986\newline
+
+Years=Number of years in the major leagues\newline
+
+CAtBat=Number of times at bat during his career\newline
+
+CHits=Number of hits during his career\newline
+
+CHmRun=Number of home runs during his career\newline
+
+CRuns=Number of runs during his career\newline
+
+CRBI=Number of runs batted in during his career\newline
+
+CWalks=Number of walks during his career\newline
+
+League=A factor with levels A and N indicating player's league at the end of 1986\newline
+
+Division=A factor with levels E and W indicating player's division at the end of 1986\newline
+
+PutOuts=Number of put outs in 1986\newline
+
+Assists=Number of assists in 1986\newline
+
+Errors=Number of errors in 1986\newline
+
+Salary=1987 annual salary on opening day in thousands of dollars\newline
+
+NewLeague=A factor with levels A and N indicating player's league at the beginning of 1987\newline
+
+
+a- )  Remove the missing data by using na.omit comment (e.g. Hitters<-na.omit(Hitters)). Create dummy variables for the categorical variables League, Division and NewLeague. Drop the categorical variables after creating the dummy variables from the data set. Perform initial data analyses to identify outliers, missing data, and variables that show high correlation with the salary and with each other. Document your findings (10 points)
+
+CAtBat,CHits,CHmRun  and CRBI are moderately correlated with Salary with the highest correlation coefficients between 0.52 to 0.57. Missing data was excluded. Boxplots for Salary indicate that there are outliers and the distribution of salary is right skewed. Some of the independent variables are highly correlated with each other.
+
+```{r}
+library(ISLR2);data("Hitters")
+
+#adding the dummy variables
+Hitters$League_1<- I(Hitters$League=="A")*1
+Hitters$Division_1<- I(Hitters$Division=="E")*1
+Hitters$NewLeague_1<- I(Hitters$NewLeague=="A")*1
+
+#dropping the categorical variables
+Hitters1<-na.omit(Hitters[,-c(14,15,20)])
+round(cor(Hitters1),2)
+boxplot(Hitters1$Salary)
+```
+
+
+b-) Create train and test data sets: select a random sample of 70% observations from the data set for the train data set and remaining  cases for the test data set. (use set.seed(994) before selecting the sample and running Neuron Network and Regression Tree) (5 points)
+
+```{r}
+set.seed(994)
+
+n1 <- nrow(Hitters1)
+q1_sample <- sample(seq_len(n1), size = floor(0.7 * n1))
+
+q1_train_data <- Hitters1[q1_sample, ]
+q1_test_data  <- Hitters1[-q1_sample, ]
+```
+
+
+c-)  Use stepwise (both ways) model selection to select the best model for predicting the Salary on the train data set. **Ensure that all variables are significant, use ** $\alpha=0.05$. Justify your choice of model. Check all regression model assumptions visually with appropriate graphs and conduct the Breusch-Pagan Test to determine whether or not the error variances are constant. Please discuss your findings. (10 points)
+
+Variables **CRuns, Walks, Years, PutOuts, and Division_1** are significant at $\alpha = 0.05$ in the selected model.  The training-set $R^2$ is 0.5366 (about 54%), and the Q–Q plot suggests some outliers/heavier-than-normal tails; the residual plots also suggest non-constant variance. 
+
+Breusch-Pagan Test:
+
+Ho: Error variances are constant\newline
+Ha: Error variances are not constant\newline
+
+The Breusch–Pagan test p-value is 0.0000000766 $< 0.05$, so we reject Ho and conclude there is evidence of heteroskedasticity (error variance is not constant). 
+
+VIFs range from about 1.02 to 5.55 (all $< 10$), so there is no evidence of severe multicollinearity. 
+
+On the test set, performance decreases: $R^2$ drops from 0.5366 to 0.2982 (about 30%), indicating weaker generalization to unseen data.  
+
+```{r}
+
+f1<-lm(Salary~.,data=q1_train_data)
+summary(f1)
+k1<-ols_step_both_p(f1, p_remove =0.05,details=FALSE)
+k1$model
+
+f2<-lm(Salary~ CRuns+Walks+Years+PutOuts+Division_1,data=q1_train_data)
+summary(f2)
+par(mfrow=c(2,2))
+plot(f2)
+
+ols_test_breusch_pagan(f2)
+vif(f2)
+#performance on train and test data set
+
+PredictedTest<-predict(f2,q1_train_data)
+ModelTest1<-data.frame(obs = q1_train_data$Salary, pred=PredictedTest)
+reg.train<-defaultSummary(ModelTest1)
+reg.train
+
+PredictedTest<-predict(f2,q1_test_data)
+ModelTest2<-data.frame(obs = q1_test_data$Salary, pred=PredictedTest)
+reg.test<-defaultSummary(ModelTest2)
+```
+
+
+d-)  Use Regression tree to predict the Salary on the train data set and evaluate the performance on the train and test data sets. (10 points)
+
+The performance of tree model is deteriorated on the test data set. $R^2$ is decreased from %68 to %36.
+```{r}
+set.seed(994)
+# Fitting the tree on train data set
+par(mfrow=c(1,1))
+
+q1.tree <- rpart(Salary ~ ., data = q1_train_data)
+rpart.plot(q1.tree, digits = 3)
+
+#regression tree on the test and train data
+PredictedTest<-predict(q1.tree,q1_train_data)
+ModelTest2<-data.frame(obs = q1_train_data$Salary, pred=PredictedTest)
+tree.train<-defaultSummary(ModelTest2)
+tree.train
+
+PredictedTest<-predict(q1.tree,q1_test_data)
+ModelTest2<-data.frame(obs = q1_test_data$Salary, pred=PredictedTest)
+tree.test<-defaultSummary(ModelTest2)
+tree.test
+```
+
+
+e-) Use Neural Network (NN) with four hidden layers with 9,7,5, and 3 neurons respectively  (hidden=c(9,7,5,3)) with softplus activation function (softplus <- function(x) { log(1 + exp(x)) }) to predict the Salary on the train data set and evaluate the performance of NN on the train and test data sets.(10 points)
+
+The neural network fits the training data extremely well ($R^2 = 0.9838$), but test-set performance is lower ($R^2 = 0.4406$), indicating some overfitting (though it generalizes better than the regression and tree in terms of test $R^2$). 
+
+```{r}
+dat <- Hitters1
+softplus <- function(x) { log(1 + exp(x)) }
+
+# IMPORTANT: compute min/max from TRAIN only (avoid leakage)
+train_mins <- sapply(q1_train_data, min)
+train_maxs <- sapply(q1_train_data, max)
+
+normalize_df <- function(df, mins, maxs) {
+  out <- df
+  for (nm in names(df)) {
+    denom <- (maxs[[nm]] - mins[[nm]])
+    out[[nm]] <- (df[[nm]] - mins[[nm]]) / denom
+  }
+  out
+}
+
+q1_norm_train <- normalize_df(q1_train_data, train_mins, train_maxs)
+q1_norm_test  <- normalize_df(q1_test_data,  train_mins, train_maxs)
+
+set.seed(994)
+q1_nn <- neuralnet(Salary ~ ., data = q1_norm_train, hidden = c(9,7,5,3), act.fct = softplus)
+plot(q1_nn)
+
+# Correct inverse transform for Salary (must match train scaling)
+salary_min <- train_mins[["Salary"]]
+salary_max <- train_maxs[["Salary"]]
+unnormalize <- function(x) { x * (salary_max - salary_min) + salary_min }
+
+# performance on train
+x_train <- q1_norm_train[, setdiff(names(q1_norm_train), "Salary")]
+predicted_y <- compute(q1_nn, x_train)$net.result
+pred_new <- unnormalize(predicted_y)
+
+ModelTest1 <- data.frame(obs = q1_train_data$Salary, pred = as.vector(pred_new))
+nn.train <- defaultSummary(ModelTest1)
+nn.train
+
+# performance on test
+x_test <- q1_norm_test[, setdiff(names(q1_norm_test), "Salary")]
+predicted_y <- compute(q1_nn, x_test)$net.result
+pred_new <- unnormalize(predicted_y)
+
+ModelTest1 <- data.frame(obs = q1_test_data$Salary, pred = as.vector(pred_new))
+nn.test <- defaultSummary(ModelTest1)
+nn.test
+```
+
+
+
+f-) Evaluate the performances of models built in part c through part e on test data set. Compare the $R^2$ and select the best model. (5 points)
+
+Comparing test-set $R^2$ values: Regression ($R^2 = 0.298$), Tree ($R^2 = 0.366$), and Neural Network ($R^2 = 0.441$). The neural network has the highest test-set $R^2$ (and the lowest test MAE), so it is selected as the best model based on test performance. 
+
+```{r}
+out.train<-data.frame(rbind(reg.train,tree.train,nn.train))
+dimnames(out.train)[[1]]<-c("Regression","Tree","Neuron Network")
+out.train
+
+out.test<-data.frame(rbind(reg.test,tree.test,nn.test))
+dimnames(out.test)[[1]]<-c("Regression","Tree","Neuron Network")
+out.test
+
+```
+
+## Problem 2
+
+Refer to the attached file for the SENIC data set.
+
+Length.of.stay = Average length of stay of all patients in hospital (in days)\newline
+Age =Average age of patients (in years)\newline
+Infection.risk=Average estimated probability of acquiring infection in hospital (in percent)\newline
+Routine.culturing.ratio =Ratio of number of cultures performed to number of patients without signs or symptoms of hospital-acquired infection, times 100\newline
+Routine.chest.X.ray.ratio =Ratio of number of X-rays performed to number of patients, without signs or symptoms of pneumonia, times 100\newline
+Number.of.beds=Average number of beds in hospital during study period\newline
+Medical.school.affiliation =Medical school affiliation, where 1=Yes, 2=No\newline
+Region=Geographic region, where: 1 =NE, 2=NC, 3=S, 4=W\newline
+Average.daily.census =Average number of patients in hospital per day during study period\newline
+Number.of.nurses=Average number of full-time equivalent registered and licensed practical nurses during study period (number full-time plus one half the number part time)\newline
+Available.facilities.and.service=Percent of 35 potential facilities and services that are provided by the hospital\newline
+
+
+Medical school affiliation is the response variable to be coded Y = 1 If Medical school affiliation and Y = 0 if no Medical school affiliation. The pool of potential predictor variables are all variables except Geographic region. Exclude Geographic region from your data set. 
+
+a-) Medical school affiliation (Y) is the response variable to be coded Y = 1 If Medical school affiliation and Y = 0 if no Medical school affiliation. The pool of potential predictor variables are all variables except Geographic region. Exclude Geographic region from your data set. (5 points)
+
+See below
+```{r}
+SENIC <- read.csv("SENIC.csv")
+#creating medical acciliation variable
+SENIC$Medical.school.affiliation<-I(SENIC$Medical.school.affiliation==1)*1
+#dropping geographic region
+SENIC1<-SENIC[-8]
+```
+
+
+
+b-)  Build a regression model to predict Medical school affiliation by using all variables on the full data set and comment on your model and perform variable selection (Hint: Use the step function.) Comment on your final model **Ensure that all variables are significant, use ** $\alpha=0.05$. Conduct the Hosmer-Lemeshow goodness of fit test  for the appropriateness of the logistic regression function by forming four
+groups. State the alternatives, decision rule, and conclusion. (10 points)
+
+
+On the model built on all, Variables Age of person, Number of beds,average daily census, and available facilities and services are significant.\newline
+
+For the model based the variable selection, Age of person, Routine culturing ratio, Number of beds,average daily census, and available facilities and services are significant.\newline
+
+Hosmer-Lemeshow goodness of fit test:
+
+Ho: Fit is good\newline
+Ha: Fit is not good
+
+Fail to reject $H_0$, the fit is good. P value is 0.8186. The fit is good.
+
+```{r}
+g<-glm(Medical.school.affiliation~.,data=SENIC1,family=binomial)
+summary(g)
+g1<-step(g,trace=0)
+g1$formula
+g1<-glm(Medical.school.affiliation ~ Age + Routine.culturing.ratio + 
+    Number.of.beds + Average.daily.census + Available.facilities.and.services,data=SENIC1,family=binomial)
+summary(g1)
+library(ResourceSelection)
+hoslem.test(g1$y,fitted(g1),g=4)
+```
+
+
+c-) Suppose that a subject is classified as with disease if p $\ge$ 0.40 and not with disease if p < 0.40. Compute the confusion matrix and comment on model performance.(10 points)
+
+With a 0.4 cutoff, logistic regression achieves Precision = 0.7000, Recall = 0.8235, and $F_1 = 0.7568$ for the positive class (1). Overall accuracy is 0.9204 (about 92%).
+
+```{r}
+true_labels <- SENIC1$Medical.school.affiliation
+predicted_probabilities <- predict(g1, SENIC1, type = "response")
+
+# use 0.40 cutoff as required
+predictions <- ifelse(predicted_probabilities >= 0.40, 1, 0)
+
+# ensure consistent factor levels (0, 1) for both
+pred_factor <- factor(predictions, levels = c(0, 1))
+true_factor <- factor(true_labels,  levels = c(0, 1))
+
+confusion_matrix <- confusionMatrix(
+  pred_factor, true_factor,
+  mode = "prec_recall",
+  positive = "1"
+)
+confusion_matrix
+
+a <- confusion_matrix
+Logistic <- a$byClass
+```
+
+
+d-) Use a decision tree to predict the Medical school affiliation and calculate the confusion matrix to evaluate the model performance.
+
+
+The C5.0 tree achieves Recall = 1.0000 (no false negatives for class 1), Precision = 0.7727, and $F_1 = 0.8718$, with accuracy 0.9558 (about 96%). This comes with 5 false positives (predicting affiliation when the true class is 0). 
+
+```{r}
+library(C50)
+set.seed(304)
+g2 <- C5.0(SENIC1[-7], as.factor(SENIC1$Medical.school.affiliation))
+
+# predict using predictors only (exclude the response column)
+predicted_class <- predict(g2, SENIC1[-7])
+
+confusion_matrix <- confusionMatrix(
+  as.factor(predicted_class),
+  as.factor(SENIC1$Medical.school.affiliation),
+  mode = "prec_recall",
+  positive = "1"
+)
+confusion_matrix
+a <- confusion_matrix
+Tree <- a$byClass
+```
+
+e-) Use Neuron Network (NN) with five hidden layers with 8,6,5,3, and 2 neurons respectively  (hidden=c(8,6,5,3,2)) with relu activation function (relu <- function(x) {x * (x>=0)}) to predict the Medical school affiliation.Suppose that a subject is classified as with disease if p $\ge$ 0.40 and not with disease if p < 0.40  and compute the confusion matrix evaluate the performance of NN.(10 points)
+
+**Note:** The ReLU function provided in the question (`relu <- function(x) {x * (x>=0)}`) will cause an error when used with the `neuralnet` package. This is because `neuralnet` requires activation functions that can be differentiated symbolically, and the `>=` operator in the standard ReLU formula cannot be processed by R's symbolic differentiation tools.
+
+To work around this, we use a "smooth ReLU" approximation that behaves nearly identically to ReLU but is fully differentiable:
+
+```r
+relu <- function(x) { (x + sqrt(x^2 + 1e-8)) / 2 }
+```
+
+This is a known limitation of the `neuralnet` package.
+
+
+The neural network predicts every observation as class 0, so Recall (Sensitivity) for class 1 is 0. Precision and F1 are undefined (NA) because there are no predicted positives. Accuracy is 0.8496 due to class imbalance rather than good classification, and balanced accuracy is 0.5.
+
+```{r}
+normalize <- function(x) { return((x - min(x)) / (max(x) - min(x))) }
+
+SENIC_norm <- as.data.frame(lapply(SENIC1, normalize))
+
+# NOTE: The neuralnet package requires differentiable activation functions 
+# for backpropagation (it uses symbolic differentiation via the Deriv package).
+# The standard ReLU: relu <- function(x) { x * (x >= 0) } is not differentiable 
+# at x = 0 and contains a logical operator that Deriv cannot handle.
+#
+# We use a smooth approximation: (x + sqrt(x^2 + epsilon)) / 2, which approaches 
+# ReLU as epsilon → 0 but remains differentiable everywhere.
+# 
+# Alternative: Use softplus: log(1 + exp(x)), which is the natural smooth 
+# approximation to ReLU, ot leaky_relu <- function(x) { ifelse(x > 0, x, 0.01 * x) }
+# which is differentiable everywhere (though not smooth at 0).
+relu <- function(x) { (x + sqrt(x^2 + 1e-8)) / 2 }
+
+set.seed(304)
+c3_nn <- neuralnet(
+  Medical.school.affiliation ~ .,
+  data = SENIC_norm,
+  hidden = c(8,6,5,3,2),
+  act.fct = relu,
+  linear.output = FALSE
+)
+plot(c3_nn)
+
+true_labels <- SENIC1$Medical.school.affiliation
+
+# predicted probabilities/scores (use compute, not predict)
+x_mat <- SENIC_norm[, setdiff(names(SENIC_norm), "Medical.school.affiliation")]
+predicted_probabilities <- compute(c3_nn, x_mat)$net.result
+
+# use 0.40 cutoff (as required)
+predictions <- ifelse(predicted_probabilities >= 0.40, 1, 0)
+
+pred_factor <- factor(predictions, levels = c(0, 1))
+true_factor <- factor(true_labels, levels = c(0, 1))
+
+confusion_matrix <- confusionMatrix(
+  pred_factor, true_factor,
+  mode = "prec_recall",
+  positive = "1"
+)
+confusion_matrix
+
+a <- confusion_matrix
+NN <- a$byClass
+```
+
+f-) which model would you choose?
+
+Based on the confusion-matrix metrics, the C5.0 tree is the best model: it has the highest $F_1$ (0.8718) and balanced accuracy (0.9739), and it achieves Recall = 1.0000 while maintaining Precision = 0.7727. Logistic regression is weaker (F1 = 0.7568), and the neural network fails to identify any positives (Precision and F1 are NA because it predicts no positives).
+
+```{r}
+data.frame(rbind(Logistic,Tree, NN))
+```
+
